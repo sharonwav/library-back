@@ -12,31 +12,42 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createMember = void 0;
+exports.auth = void 0;
 const connection_1 = __importDefault(require("../../connection"));
 const util_1 = require("util");
-const uuid_1 = require("uuid");
 const query = (0, util_1.promisify)(connection_1.default.query).bind(connection_1.default);
-const createMember = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const date_fns_1 = require("date-fns");
+const auth = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { first_name, last_name, id_card, birth_date, gender } = req.body;
-        const id = `MMBR-${(0, uuid_1.v4)()}-${new Date().getFullYear()}${new Date().getMonth() + 1}${new Date().getDate()}`;
-        yield query({
-            sql: 'INSERT INTO member(id, first_name, last_name,id_card, birth_date, gender) VALUES(?, ?, ?, ?, ?, ?)',
-            values: [id, first_name, last_name, id_card, birth_date, gender]
+        const { email, password } = req.body;
+        const findStaff = yield query({
+            sql: `SELECT * FROM staff
+            JOIN shift_has_Staff ON staff.id = shift_has_staff.staff_id
+            JOIN shift ON shift_has_staff.shift_id = shift.id
+            WHERE email = ? AND password = ?`,
+            values: [email, password]
         });
+        const checkStaffSchedule = (0, date_fns_1.isAfter)((0, date_fns_1.format)(new Date(), 'yyy-MM-dd kk:mm:ss'), `${(0, date_fns_1.format)(new Date(), 'yyyy-MM-dd')} ${findStaff[0].start_time}`)
+            && (0, date_fns_1.isBefore)((0, date_fns_1.format)(new Date(), 'yyyy-MM-dd kk:mm:ss'), `${(0, date_fns_1.format)(new Date(), 'yyyy-MM-dd')} ${findStaff[0].end_time}`);
+        if (checkStaffSchedule === false)
+            throw { message: 'Sign in failed!' };
         res.status(200).json({
             error: false,
-            message: 'Create Member Success',
-            data: { id, first_name, last_name, id_card, birth_date, gender }
+            message: 'Successfully signed in!',
+            data: {
+                id: findStaff[0].id,
+                email: findStaff[0].email,
+                password: findStaff[0].password,
+                role: 'Staff'
+            }
         });
     }
     catch (error) {
         res.status(error.status || 500).json({
             error: true,
-            message: error.msg || error.message,
+            message: error.message,
             data: {}
         });
     }
 });
-exports.createMember = createMember;
+exports.auth = auth;
