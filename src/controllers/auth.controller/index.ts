@@ -38,6 +38,7 @@ export const auth = async(req: Request, res: Response) => {
                 role: 'Staff'
             }
         })
+        
     } catch (error: any) {
         res.status(error.status || 500).json({
             error: true,

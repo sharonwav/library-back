@@ -10,6 +10,8 @@ const port = 1000;
 app.get('/', (req, res) => {
     res.send('<p>You are on the server!</p>');
 });
+const routers_1 = __importDefault(require("./routers"));
+app.use(routers_1.default);
 app.listen(port, () => {
     console.log(`You are on the server http://localhost:${port}`);
 });
